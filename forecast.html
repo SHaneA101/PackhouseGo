@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f3d28">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <script src="/pwa-install.js" defer></script>
+  <title>PackhouseGo | Forecast</title>
+  <style>
+    body { margin:0; font-family:Segoe UI,Arial,sans-serif; background:#f4f7fb; color:#1f2530; }
+    nav { background:#1c4f6b; color:#fff; padding:14px 20px; }
+    nav a { color:#d8efff; margin-right:12px; text-decoration:none; }
+    .container { max-width:980px; margin:18px auto; padding:0 14px; }
+    .panel { background:#fff; border-radius:12px; padding:16px; box-shadow:0 3px 12px rgba(0,0,0,.06); margin-bottom:16px; }
+    .grid { display:grid; gap:10px; grid-template-columns:1fr 1fr 1fr 1fr auto; }
+    input, select, button { padding:10px; border:1px solid #d5deea; border-radius:8px; }
+    button { background:#1d6d97; color:#fff; border:0; font-weight:700; cursor:pointer; }
+    .bar { height:14px; border-radius:8px; background:#cbe4f5; margin:6px 0 12px; position:relative; overflow:hidden; }
+    .fill { height:100%; background:#1d6d97; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { border-bottom:1px solid #e3e9f1; padding:8px; text-align:left; }
+    @media (max-width:900px) { .grid { grid-template-columns:1fr 1fr; } }
+  </style>
+</head>
+<body>
+  <nav>
+    <strong>Forecast</strong>
+    <span style="margin-left:16px;">
+      <a href="index.html">Dashboard</a>
+      <a href="qc.html">QC</a>
+      <a href="dailyupdate.html">Daily Updates</a>
+    </span>
+  </nav>
+  <div class="container">
+    <div class="panel">
+      <h2>Add Weekly Forecast</h2>
+      <form id="fcForm" class="grid">
+        <input id="week" type="week" required>
+        <select id="fruitType" required>
+          <option value="">Fruit Type</option>
+          <option value="citrus">Citrus</option>
+          <option value="stone">Stone Fruit</option>
+        </select>
+        <input id="farmer" placeholder="Farmer Name" required>
+        <input id="tons" type="number" step="0.1" min="0.1" placeholder="Expected Tons" required>
+        <button type="submit">Save</button>
+      </form>
+    </div>
+    <div class="panel">
+      <h2>Capacity View (Tons)</h2>
+      <div id="charts"></div>
+    </div>
+    <div class="panel">
+      <h2>Forecast Records</h2>
+      <table>
+        <thead><tr><th>Week</th><th>Fruit</th><th>Farmer</th><th>Tons</th><th>Submitted By</th><th>Time</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+    const session = JSON.parse(localStorage.getItem("packhouse_session") || "null");
+    if (!session) window.location.href = "login.html";
+
+    async function api(path, options = {}) {
+      const res = await fetch(path, {
+        headers: { "Content-Type": "application/json" },
+        ...options
+      });
+      let payload = {};
+      try { payload = await res.json(); } catch (_e) {}
+      if (!res.ok) throw new Error(payload.error || "Request failed");
+      return payload;
+    }
+
+    async function render() {
+      const rows = await api("/api/forecast");
+      document.getElementById("rows").innerHTML = rows.map((r) =>
+        `<tr><td>${r.week}</td><td>${r.fruitType}</td><td>${r.farmer}</td><td>${r.tons}</td><td>${r.submittedBy || r.farmer}</td><td>${r.timestamp ? new Date(r.timestamp).toLocaleString() : ""}</td></tr>`
+      ).join("");
+
+      const citrus = rows.filter(r => r.fruitType === "citrus").reduce((a,b) => a + Number(b.tons), 0);
+      const stone = rows.filter(r => r.fruitType === "stone").reduce((a,b) => a + Number(b.tons), 0);
+      const max = Math.max(1, citrus, stone);
+      document.getElementById("charts").innerHTML = `
+        <div>Citrus: ${citrus.toFixed(1)}t</div>
+        <div class="bar"><div class="fill" style="width:${(citrus/max)*100}%"></div></div>
+        <div>Stone fruit: ${stone.toFixed(1)}t</div>
+        <div class="bar"><div class="fill" style="width:${(stone/max)*100}%"></div></div>
+      `;
+    }
+
+    document.getElementById("fcForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await api("/api/forecast", {
+        method: "POST",
+        body: JSON.stringify({
+        week: document.getElementById("week").value,
+        fruitType: document.getElementById("fruitType").value,
+        farmer: document.getElementById("farmer").value.trim(),
+        tons: Number(document.getElementById("tons").value),
+        submittedBy: session.name,
+        submittedByRole: session.role || "admin"
+        })
+      });
+      e.target.reset();
+      await render();
+    });
+
+    render();
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

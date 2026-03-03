@@ -1,0 +1,235 @@
+{
+  "users": [
+    {
+      "id": "u-admin",
+      "name": "Packhouse Admin",
+      "email": "admin@packhouse.local",
+      "password": "admin123",
+      "role": "admin",
+      "farm": "Main Packhouse",
+      "commodities": [
+        "citrus",
+        "stone"
+      ]
+    },
+    {
+      "id": "u-1771324742737",
+      "name": "someone",
+      "farm": "Someone",
+      "email": "some@mail.com",
+      "password": "password123",
+      "role": "farmer",
+      "commodities": [
+        "citrus",
+        "stone"
+      ]
+    },
+    {
+      "id": "u-1771325067727",
+      "name": "John",
+      "farm": "Doe",
+      "email": "johndoe@mail.com",
+      "password": "pass123",
+      "role": "farmer",
+      "commodities": [
+        "citrus",
+        "stone"
+      ]
+    }
+  ],
+  "batches": [
+    {
+      "id": "B1770965107074",
+      "farmer": "Martin",
+      "fruitType": "citrus",
+      "variety": "nad",
+      "bins": 300,
+      "grade": "OG",
+      "status": "received",
+      "createdAt": "2026-02-13T06:45:07.074Z"
+    },
+    {
+      "id": "B1770896590233",
+      "farmer": "Martin",
+      "fruitType": "citrus",
+      "variety": "Ruby Star",
+      "bins": 200,
+      "grade": "OG",
+      "status": "packed",
+      "createdAt": "2026-02-12T11:43:10.233Z"
+    },
+    {
+      "id": "B1770895898266",
+      "farmer": "Martin",
+      "fruitType": "stone",
+      "variety": "Ruby Star",
+      "bins": 250,
+      "grade": "A",
+      "status": "ready_to_pack",
+      "createdAt": "2026-02-12T11:31:38.266Z"
+    }
+  ],
+  "qc": [
+    {
+      "batchId": "",
+      "farmer": "John",
+      "farm": "Doe",
+      "fruitType": "",
+      "defect": 4,
+      "decision": "hold",
+      "rejectionReason": "Scale",
+      "timestamp": "2026-03-03T12:30:49.090Z"
+    },
+    {
+      "batchId": "",
+      "farmer": "John",
+      "farm": "Doe",
+      "fruitType": "",
+      "defect": 4,
+      "decision": "hold",
+      "rejectionReason": "Scale",
+      "timestamp": "2026-02-27T13:24:00.556Z"
+    },
+    {
+      "batchId": "B1770965107074",
+      "fruitType": "citrus",
+      "defect": 5,
+      "decision": "pass",
+      "timestamp": "2026-02-13T06:49:03.776Z"
+    }
+  ],
+  "updates": [
+    {
+      "farmer": "John",
+      "message": "ek stuur vandag 300 bins ang",
+      "sentBy": "John",
+      "source": "farmer_to_admin",
+      "timestamp": "2026-02-27T13:21:55.672Z"
+    },
+    {
+      "farmer": "John",
+      "message": "Hi Uni. I will sent you 500 AFD",
+      "sentBy": "John",
+      "source": "farmer_to_admin",
+      "timestamp": "2026-02-17T10:45:17.459Z"
+    },
+    {
+      "farmer": "Packhouse Admin",
+      "message": "Hi Martin, I gonna sent 100 bins Ruby Star today",
+      "sentBy": "Packhouse Admin",
+      "source": "farmer_to_admin",
+      "timestamp": "2026-02-13T07:17:35.587Z"
+    },
+    {
+      "farmer": "Martin",
+      "message": "Hello Martin,\nCitrus: 1 batch(es) total | Ready: 1 | Hold: 0 | Dispatched: 0.\nStone fruit: 1 batch(es) total | Ready: 1 | Hold: 0 | Dispatched: 0.\nPackhouseGo status updated 2026/02/12, 13:43:53.",
+      "sentBy": "Packhouse Admin",
+      "timestamp": "2026-02-12T11:44:18.963Z"
+    }
+  ],
+  "forecast": [
+    {
+      "week": "2026-W13",
+      "fruitType": "citrus",
+      "farmer": "John",
+      "tons": 80,
+      "submittedBy": "John",
+      "submittedByRole": "farmer",
+      "timestamp": "2026-02-27T13:22:32.685Z"
+    },
+    {
+      "week": "2026-W14",
+      "fruitType": "citrus",
+      "farmer": "John",
+      "tons": 50,
+      "submittedBy": "John",
+      "submittedByRole": "farmer",
+      "timestamp": "2026-02-17T10:46:56.711Z"
+    },
+    {
+      "week": "2026-W10",
+      "fruitType": "stone",
+      "farmer": "Packhouse Admin",
+      "tons": 500,
+      "submittedBy": "Packhouse Admin",
+      "submittedByRole": "admin",
+      "timestamp": "2026-02-13T09:35:07.463Z"
+    },
+    {
+      "week": "2026-W09",
+      "fruitType": "citrus",
+      "farmer": "Packhouse Admin",
+      "tons": 100,
+      "submittedBy": "Packhouse Admin",
+      "submittedByRole": "admin",
+      "timestamp": "2026-02-13T07:16:51.941Z"
+    },
+    {
+      "week": "2026-W18",
+      "fruitType": "citrus",
+      "farmer": "Martin",
+      "tons": 500
+    }
+  ],
+  "mrls": [
+    {
+      "id": "mrl-1772541061712",
+      "farmer": "John",
+      "farm": "Doe",
+      "fileName": "download_1_.jfif",
+      "url": "/uploads/mrl/1772541061702-vqsi1k.jfif",
+      "note": "LAB",
+      "uploadedBy": "John",
+      "mimeType": "image/jpeg",
+      "timestamp": "2026-03-03T12:31:01.712Z"
+    },
+    {
+      "id": "mrl-1772198760437",
+      "farmer": "John",
+      "farm": "Doe",
+      "fileName": "WhatsApp_Image_2026-01-22_at_16.10.05.jpeg",
+      "url": "/uploads/mrl/1772198760433-4y1oei.jpeg",
+      "note": "MRL test",
+      "uploadedBy": "John",
+      "mimeType": "image/jpeg",
+      "timestamp": "2026-02-27T13:26:00.437Z"
+    }
+  ],
+  "internalResults": [
+    {
+      "id": "internal-1772198706708",
+      "farmer": "John",
+      "farm": "Doe",
+      "batchId": "",
+      "fileName": "download_1_.jfif",
+      "url": "/uploads/internal/1772198706703-10ncgv.jfif",
+      "note": "Good for picking",
+      "uploadedBy": "John",
+      "mimeType": "image/jpeg",
+      "timestamp": "2026-02-27T13:25:06.708Z"
+    },
+    {
+      "id": "internal-1772011489748",
+      "farmer": "John",
+      "farm": "Doe",
+      "batchId": "",
+      "fileName": "download_1_.jfif",
+      "url": "/uploads/internal/1772011489743-3m8pq5.jfif",
+      "note": "Good for picking",
+      "uploadedBy": "John",
+      "mimeType": "image/jpeg",
+      "timestamp": "2026-02-25T09:24:49.748Z"
+    },
+    {
+      "id": "internal-1770964954471",
+      "farmer": "Martin",
+      "batchId": "B1770895898266",
+      "fileName": "internal-test.jpg",
+      "url": "/uploads/internal/1770964954466-y18uvf.jpg",
+      "note": "camera test",
+      "uploadedBy": "Packhouse Admin",
+      "mimeType": "image/jpeg",
+      "timestamp": "2026-02-13T06:42:34.471Z"
+    }
+  ]
+}

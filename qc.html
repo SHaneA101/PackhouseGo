@@ -1,0 +1,376 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f3d28">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <script src="/pwa-install.js" defer></script>
+  <title>PackhouseGo | QC</title>
+  <style>
+    body { margin:0; font-family:Segoe UI,Arial,sans-serif; background:#f8f9fb; color:#20242a; }
+    nav { background:#1f2b4d; color:#fff; padding:14px 20px; }
+    nav a { color:#dae4ff; margin-right:12px; text-decoration:none; }
+    .container { max-width:980px; margin:18px auto; padding:0 14px; }
+    .panel { background:#fff; border-radius:12px; box-shadow:0 3px 12px rgba(0,0,0,.06); padding:16px; margin-bottom:16px; }
+    select, input, button, textarea { padding:10px; border:1px solid #d9deea; border-radius:8px; }
+    button { background:#2958a8; color:#fff; border:0; font-weight:700; cursor:pointer; }
+    textarea { width:100%; box-sizing:border-box; min-height:72px; resize:vertical; }
+    .grid { display:grid; gap:10px; grid-template-columns:2fr 1fr 1fr 1fr; }
+    .mrlGrid { display:grid; gap:10px; grid-template-columns:1fr 1fr; }
+    .full { grid-column:1/-1; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { border-bottom:1px solid #e4e7ef; padding:8px; text-align:left; font-size:.94rem; }
+    #mrlMsg, #internalMsg { min-height:20px; margin-top:8px; color:#1f5c2a; }
+    .hint { color:#4a5366; font-size:.9rem; margin:6px 0 0; }
+    @media (max-width:760px) {
+      .grid { grid-template-columns:1fr; }
+      .mrlGrid { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <strong>QC Module</strong>
+    <span style="margin-left:16px;">
+      <a href="index.html">Dashboard</a>
+      <a href="dailyupdate.html">Daily Updates</a>
+      <a href="forecast.html">Forecast</a>
+    </span>
+  </nav>
+  <div class="container">
+    <div class="panel">
+      <h2>QC Rejects</h2>
+      <form id="qcForm" class="grid">
+        <select id="qcFarmer" required></select>
+        <input id="defect" placeholder="Defect % (0-100)" type="number" min="0" max="100" required>
+        <input id="rejectReason" placeholder="Rejected for (e.g. skin damage, pest marks)" required>
+        <button type="submit">Record Reject</button>
+      </form>
+      <div id="qcMsg" style="min-height:20px; margin-top:8px; color:#1f5c2a;"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Upload Farmer MRL</h2>
+      <form id="mrlForm" class="mrlGrid">
+        <div>
+          <label for="mrlFarmer">Farmer</label><br>
+          <select id="mrlFarmer" required></select>
+        </div>
+        <div>
+          <label for="mrlFile">MRL Document</label><br>
+          <input id="mrlFile" type="file" required>
+        </div>
+        <div class="full">
+          <label for="mrlNote">Note (optional)</label><br>
+          <textarea id="mrlNote" placeholder="Lab, sample ID, or comments"></textarea>
+        </div>
+        <div class="full">
+          <button type="submit">Upload MRL</button>
+        </div>
+      </form>
+      <div id="mrlMsg"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Internal Results (Phone Camera)</h2>
+      <form id="internalForm" class="mrlGrid">
+        <div>
+          <label for="internalFarmer">Farmer</label><br>
+          <select id="internalFarmer" required></select>
+        </div>
+        <div>
+          <label for="internalCamera">Capture Result Image</label><br>
+          <input id="internalCamera" type="file" accept="image/*" capture="environment" required>
+          <p class="hint">On mobile, this opens your camera. On desktop, choose an image file.</p>
+        </div>
+        <div>
+          <label for="internalBatchId">Batch ID (optional)</label><br>
+          <input id="internalBatchId" placeholder="e.g. B1770895898266">
+        </div>
+        <div>
+          <label for="internalNote">Note (optional)</label><br>
+          <input id="internalNote" placeholder="Internal test note">
+        </div>
+        <div class="full">
+          <button type="submit">Upload Internal Result</button>
+        </div>
+      </form>
+      <div id="internalMsg"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Recent QC Rejects</h2>
+      <table>
+        <thead><tr><th>Time</th><th>Farmer</th><th>Farm</th>
+          <th>Defect %</th><th>Rejected For</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2>MRL Upload Log</h2>
+      <table>
+        <thead><tr><th>Time</th><th>Farmer</th><th>File</th><th>Uploaded By</th><th>Note</th></tr></thead>
+        <tbody id="mrlRows"></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2>Internal Results Log</h2>
+      <table>
+        <thead><tr><th>Time</th><th>Farmer</th><th>Batch</th><th>Image</th><th>Uploaded By</th><th>Note</th></tr></thead>
+        <tbody id="internalRows"></tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+    const session = JSON.parse(localStorage.getItem("packhouse_session") || "null");
+    if (!session) window.location.href = "login.html";
+
+    async function api(path, options = {}) {
+      const res = await fetch(path, {
+        headers: { "Content-Type": "application/json" },
+        ...options
+      });
+      let payload = {};
+      try { payload = await res.json(); } catch (_e) {}
+      if (!res.ok) throw new Error(payload.error || "Request failed");
+      return payload;
+    }
+
+    async function loadUserOptions() {
+      try {
+        return await api("/api/users");
+      } catch (_e) {
+        try {
+          const farmers = await api("/api/farmers");
+          return (farmers || []).map((f) => ({ ...f, role: "farmer" }));
+        } catch (_e2) {
+          const batches = await api("/api/batches");
+          return [...new Set((batches || []).map((b) => String(b.farmer || "").trim()).filter(Boolean))]
+            .map((name) => ({ name, farm: "", role: "farmer" }));
+        }
+      }
+    }
+
+    async function renderQcFarmerOptions() {
+      const users = await loadUserOptions();
+      const farmers = (users || []).filter((u) => (u.role || "").toLowerCase() === "farmer");
+      const farmerSelect = document.getElementById("qcFarmer");
+
+      if (!farmers.length) {
+        farmerSelect.innerHTML = "<option value=''>No available farmers</option>";
+        return;
+      }
+
+      farmerSelect.innerHTML = "<option value=''>Select Farmer</option>" + farmers.map((u) =>
+        `<option value="${u.name}">${u.name} | ${u.farm || "No Farm"}</option>`
+      ).join("");
+    }
+
+    async function renderQcRows() {
+      const qc = await api("/api/qc");
+      const rejects = qc.filter((r) => r.decision !== "pass");
+      document.getElementById("rows").innerHTML = rejects.slice(0, 20).map((r) => `
+        <tr><td>${new Date(r.timestamp).toLocaleString()}</td><td>${r.farmer || ""}</td><td>${r.farm || ""}</td><td>${r.batchId || "-"}</td><td>${r.defect}%</td><td>${r.rejectionReason || "-"}</td></tr>
+      `).join("");
+    }
+
+    async function renderFarmerOptions() {
+      const users = await loadUserOptions();
+      const selectable = (users || []).filter((u) => String(u.name || "").trim());
+
+      const mrlSelect = document.getElementById("mrlFarmer");
+      const internalSelect = document.getElementById("internalFarmer");
+
+      if (!selectable.length) {
+        const empty = "<option value=''>No available users found</option>";
+        mrlSelect.innerHTML = empty;
+        internalSelect.innerHTML = empty;
+        return;
+      }
+
+      const options = selectable.map((u) =>
+        `<option value="${u.name}">${u.name} | ${u.farm || "No Farm"} | ${u.role || "user"}</option>`
+      ).join("");
+      mrlSelect.innerHTML = options;
+      internalSelect.innerHTML = options;
+    }
+
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("Could not read file."));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function renderMrlRows() {
+      const rows = await api("/api/mrls");
+      document.getElementById("mrlRows").innerHTML = rows.slice(0, 30).map((r) => `
+        <tr>
+          <td>${new Date(r.timestamp).toLocaleString()}</td>
+          <td>${r.farmer}</td>
+          <td><a href="${r.url}" target="_blank" rel="noopener">${r.fileName}</a></td>
+          <td>${r.uploadedBy || "Unknown"}</td>
+          <td>${r.note || ""}</td>
+        </tr>
+      `).join("");
+    }
+
+    async function renderInternalRows() {
+      const rows = await api("/api/internal-results");
+      document.getElementById("internalRows").innerHTML = rows.slice(0, 30).map((r) => `
+        <tr>
+          <td>${new Date(r.timestamp).toLocaleString()}</td>
+          <td>${r.farmer}</td>
+          <td>${r.batchId || ""}</td>
+          <td><a href="${r.url}" target="_blank" rel="noopener">${r.fileName}</a></td>
+          <td>${r.uploadedBy || "Unknown"}</td>
+          <td>${r.note || ""}</td>
+        </tr>
+      `).join("");
+    }
+
+    document.getElementById("qcForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById("qcMsg");
+      msg.style.color = "#1f5c2a";
+      msg.textContent = "";
+
+      const farmer = document.getElementById("qcFarmer").value;
+      const defect = Number(document.getElementById("defect").value);
+      const rejectionReason = document.getElementById("rejectReason").value.trim();
+
+      if (!farmer) {
+        msg.style.color = "#b00020";
+        msg.textContent = "Please select a farmer.";
+        return;
+      }
+      if (!Number.isFinite(defect) || defect < 0 || defect > 100) {
+        msg.style.color = "#b00020";
+        msg.textContent = "Defect % must be between 0 and 100.";
+        return;
+      }
+      if (!rejectionReason) {
+        msg.style.color = "#b00020";
+        msg.textContent = "Please enter the rejection reason.";
+        return;
+      }
+
+      try {
+        await api("/api/qc", {
+          method: "POST",
+          body: JSON.stringify({ farmer, defect, decision: "hold", rejectionReason })
+        });
+        document.getElementById("defect").value = "";
+        document.getElementById("rejectReason").value = "";
+        msg.textContent = "Reject recorded successfully.";
+        await renderQcRows();
+      } catch (err) {
+        msg.style.color = "#b00020";
+        msg.textContent = err.message || "Could not record reject.";
+      }
+    });
+
+    document.getElementById("mrlForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById("mrlMsg");
+      msg.style.color = "#1f5c2a";
+      msg.textContent = "";
+
+      const farmer = document.getElementById("mrlFarmer").value;
+      const fileInput = document.getElementById("mrlFile");
+      const file = fileInput.files[0];
+      const note = document.getElementById("mrlNote").value.trim();
+
+      if (!farmer || !file) {
+        msg.style.color = "#b00020";
+        msg.textContent = "Select a farmer and MRL file.";
+        return;
+      }
+
+      try {
+        const fileData = await fileToDataUrl(file);
+        await api("/api/mrls", {
+          method: "POST",
+          body: JSON.stringify({
+            farmer,
+            fileName: file.name,
+            fileData,
+            note,
+            uploadedBy: session.name || "Unknown"
+          })
+        });
+
+        document.getElementById("mrlNote").value = "";
+        document.getElementById("mrlFile").value = "";
+        msg.textContent = "MRL uploaded successfully.";
+        await renderMrlRows();
+      } catch (err) {
+        msg.style.color = "#b00020";
+        msg.textContent = err.message || "Could not upload MRL.";
+      }
+    });
+
+    document.getElementById("internalForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById("internalMsg");
+      msg.style.color = "#1f5c2a";
+      msg.textContent = "";
+
+      const farmer = document.getElementById("internalFarmer").value;
+      const fileInput = document.getElementById("internalCamera");
+      const file = fileInput.files[0];
+      const note = document.getElementById("internalNote").value.trim();
+      const batchId = document.getElementById("internalBatchId").value.trim();
+
+      if (!farmer || !file) {
+        msg.style.color = "#b00020";
+        msg.textContent = "Select a farmer and capture/select an image.";
+        return;
+      }
+
+      try {
+        const fileData = await fileToDataUrl(file);
+        await api("/api/internal-results", {
+          method: "POST",
+          body: JSON.stringify({
+            farmer,
+            fileName: file.name,
+            fileData,
+            note,
+            batchId,
+            uploadedBy: session.name || "Unknown"
+          })
+        });
+
+        document.getElementById("internalCamera").value = "";
+        document.getElementById("internalNote").value = "";
+        document.getElementById("internalBatchId").value = "";
+        msg.textContent = "Internal result uploaded successfully.";
+        await renderInternalRows();
+      } catch (err) {
+        msg.style.color = "#b00020";
+        msg.textContent = err.message || "Could not upload internal result.";
+      }
+    });
+
+    renderQcFarmerOptions();
+    renderQcRows();
+    renderFarmerOptions();
+    renderMrlRows();
+    renderInternalRows();
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

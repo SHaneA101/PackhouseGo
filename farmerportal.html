@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f3d28">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <script src="/pwa-install.js" defer></script>
+  <title>PackhouseGo | Farmer Portal</title>
+  <style>
+    body { margin:0; font-family:Segoe UI,Arial,sans-serif; background:#f3f7ef; color:#1f2a1f; }
+    nav { background:#2e5d31; color:#fff; padding:14px 20px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+    nav a { color:#d9f2da; text-decoration:none; margin-right:10px; }
+    .container { max-width:1020px; margin:18px auto; padding:0 14px; }
+    .panel { background:#fff; border-radius:12px; padding:16px; box-shadow:0 3px 12px rgba(0,0,0,.06); margin-bottom:16px; }
+    .grid { display:grid; gap:10px; grid-template-columns:1fr 1fr 1fr auto; }
+    input, select, textarea, button { width:100%; box-sizing:border-box; padding:10px; border:1px solid #d7e2d4; border-radius:8px; }
+    textarea { min-height:120px; resize:vertical; }
+    button { background:#2e7a38; color:#fff; border:0; font-weight:700; cursor:pointer; }
+    .tableWrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    table { width:100%; min-width:700px; border-collapse:collapse; }
+    th, td { border-bottom:1px solid #e6eee3; padding:8px; text-align:left; font-size:.94rem; }
+    .msg { min-height:20px; margin-top:8px; color:#1f6a27; }
+    @media (max-width:850px) { .grid { grid-template-columns:1fr 1fr; } }
+    @media (max-width:640px) { .grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <nav>
+    <div><strong>Farmer Portal</strong> <span id="who"></span></div>
+    <div>
+      <a href="farmerportal.html">Portal</a>
+      <a href="#" id="logout">Logout</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="panel">
+      <h2>Send Daily Update To Admin</h2>
+      <form id="updateForm">
+        <textarea id="dailyMessage" placeholder="Type your daily operational update for the packhouse team..." required></textarea>
+        <button type="submit">Send Daily Update</button>
+      </form>
+      <div id="updateMsg" class="msg"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Submit Forecast For Following Week</h2>
+      <form id="forecastForm" class="grid">
+        <input id="week" type="week" required>
+        <select id="fruitType" required>
+          <option value="">Fruit Type</option>
+          <option value="citrus">Citrus</option>
+          <option value="stone">Stone Fruit</option>
+        </select>
+        <input id="tons" type="number" min="0.1" step="0.1" placeholder="Expected Tons" required>
+        <button type="submit">Submit Forecast</button>
+      </form>
+      <div id="forecastMsg" class="msg"></div>
+    </div>
+
+    <div class="panel">
+      <h2>My Daily Updates</h2>
+      <div class="tableWrap">
+        <table>
+          <thead><tr><th>Time</th><th>Message</th></tr></thead>
+          <tbody id="updateRows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>My Forecast Submissions</h2>
+      <div class="tableWrap">
+        <table>
+          <thead><tr><th>Week</th><th>Fruit</th><th>Tons</th><th>Submitted</th></tr></thead>
+          <tbody id="forecastRows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>My QC Rejects</h2>
+      <div class="tableWrap">
+        <table>
+          <thead><tr><th>Time</th><th>Batch</th><th>Defect %</th><th>Rejected For</th></tr></thead>
+          <tbody id="qcRejectRows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>My MRL Records</h2>
+      <div class="tableWrap">
+        <table>
+          <thead><tr><th>Time</th><th>File</th><th>Note</th><th>Uploaded By</th></tr></thead>
+          <tbody id="mrlRows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>My Internal Results</h2>
+      <div class="tableWrap">
+        <table>
+          <thead><tr><th>Time</th><th>Batch</th><th>Image</th><th>Note</th><th>Uploaded By</th></tr></thead>
+          <tbody id="internalRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const session = JSON.parse(localStorage.getItem("packhouse_session") || "null");
+    if (!session) window.location.href = "login.html";
+    document.getElementById("who").textContent = ` | ${session.name}`;
+
+    async function api(path, options = {}) {
+      const res = await fetch(path, {
+        headers: { "Content-Type": "application/json" },
+        ...options
+      });
+      let payload = {};
+      try { payload = await res.json(); } catch (_e) {}
+      if (!res.ok) throw new Error(payload.error || "Request failed");
+      return payload;
+    }
+
+    function defaultFollowingWeek() {
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      const year = d.getFullYear();
+      const jan1 = new Date(year, 0, 1);
+      const day = jan1.getDay() || 7;
+      const dayOffset = Math.floor((d - jan1) / 86400000) + day;
+      const week = Math.ceil(dayOffset / 7);
+      return `${year}-W${String(week).padStart(2, "0")}`;
+    }
+
+    async function renderMyUpdates() {
+      const rows = await api("/api/updates");
+      const mine = rows.filter((r) => r.farmer === session.name && r.source === "farmer_to_admin");
+      document.getElementById("updateRows").innerHTML = mine.slice(0, 30).map((r) =>
+        `<tr><td>${new Date(r.timestamp).toLocaleString()}</td><td>${r.message.replace(/\n/g, "<br>")}</td></tr>`
+      ).join("");
+    }
+
+    async function renderMyForecasts() {
+      const rows = await api("/api/forecast");
+      const mine = rows.filter((r) => r.farmer === session.name);
+      document.getElementById("forecastRows").innerHTML = mine.slice(0, 30).map((r) =>
+        `<tr><td>${r.week}</td><td>${r.fruitType}</td><td>${r.tons}</td><td>${r.timestamp ? new Date(r.timestamp).toLocaleString() : ""}</td></tr>`
+      ).join("");
+    }
+
+    function isForMeByNameOrFarm(row) {
+      const rowFarmer = String(row.farmer || "").trim().toLowerCase();
+      const rowFarm = String(row.farm || "").trim().toLowerCase();
+      const meName = String(session.name || "").trim().toLowerCase();
+      const meFarm = String(session.farm || "").trim().toLowerCase();
+      return rowFarmer === meName || (meFarm && rowFarm && rowFarm === meFarm);
+    }
+
+    async function renderMyQcRejects() {
+      const [qcRows, batches] = await Promise.all([api("/api/qc"), api("/api/batches")]);
+      const batchById = Object.fromEntries((batches || []).map((b) => [b.id, b]));
+      const mine = (qcRows || []).filter((r) => {
+        if (isForMeByNameOrFarm(r)) return true;
+        const batch = batchById[r.batchId];
+        if (!batch) return false;
+        return isForMeByNameOrFarm({ farmer: batch.farmer, farm: batch.farm });
+      }).filter((r) => r.decision !== "pass");
+
+      document.getElementById("qcRejectRows").innerHTML = mine.slice(0, 30).map((r) =>
+        `<tr><td>${new Date(r.timestamp).toLocaleString()}</td><td>${r.batchId}</td><td>${r.defect}%</td><td>${r.rejectionReason || "-"}</td></tr>`
+      ).join("");
+    }
+
+    async function renderMyMrls() {
+      const rows = await api("/api/mrls");
+      const mine = (rows || []).filter((r) => isForMeByNameOrFarm(r));
+      document.getElementById("mrlRows").innerHTML = mine.slice(0, 30).map((r) =>
+        `<tr><td>${new Date(r.timestamp).toLocaleString()}</td><td><a href="${r.url}" target="_blank" rel="noopener">${r.fileName}</a></td><td>${r.note || ""}</td><td>${r.uploadedBy || "Unknown"}</td></tr>`
+      ).join("");
+    }
+
+    async function renderMyInternalResults() {
+      const rows = await api("/api/internal-results");
+      const mine = (rows || []).filter((r) => isForMeByNameOrFarm(r));
+      document.getElementById("internalRows").innerHTML = mine.slice(0, 30).map((r) =>
+        `<tr><td>${new Date(r.timestamp).toLocaleString()}</td><td>${r.batchId || ""}</td><td><a href="${r.url}" target="_blank" rel="noopener">${r.fileName}</a></td><td>${r.note || ""}</td><td>${r.uploadedBy || "Unknown"}</td></tr>`
+      ).join("");
+    }
+
+    document.getElementById("updateForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msgBox = document.getElementById("updateMsg");
+      msgBox.style.color = "#1f6a27";
+      msgBox.textContent = "";
+      try {
+        await api("/api/updates", {
+          method: "POST",
+          body: JSON.stringify({
+            farmer: session.name,
+            message: document.getElementById("dailyMessage").value.trim(),
+            sentBy: session.name,
+            source: "farmer_to_admin"
+          })
+        });
+        document.getElementById("dailyMessage").value = "";
+        msgBox.textContent = "Daily update submitted.";
+        await renderMyUpdates();
+      } catch (err) {
+        msgBox.style.color = "#b00020";
+        msgBox.textContent = err.message || "Could not submit update.";
+      }
+    });
+
+    document.getElementById("forecastForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msgBox = document.getElementById("forecastMsg");
+      msgBox.style.color = "#1f6a27";
+      msgBox.textContent = "";
+      try {
+        await api("/api/forecast", {
+          method: "POST",
+          body: JSON.stringify({
+            week: document.getElementById("week").value,
+            fruitType: document.getElementById("fruitType").value,
+            farmer: session.name,
+            tons: Number(document.getElementById("tons").value),
+            submittedBy: session.name,
+            submittedByRole: session.role || "farmer"
+          })
+        });
+        document.getElementById("forecastForm").reset();
+        document.getElementById("week").value = defaultFollowingWeek();
+        msgBox.textContent = "Forecast submitted.";
+        await renderMyForecasts();
+      } catch (err) {
+        msgBox.style.color = "#b00020";
+        msgBox.textContent = err.message || "Could not submit forecast.";
+      }
+    });
+
+    document.getElementById("logout").addEventListener("click", (e) => {
+      e.preventDefault();
+      localStorage.removeItem("packhouse_session");
+      window.location.href = "login.html";
+    });
+
+    document.getElementById("week").value = defaultFollowingWeek();
+    renderMyUpdates();
+    renderMyForecasts();
+    renderMyQcRejects();
+    renderMyMrls();
+    renderMyInternalResults();
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
