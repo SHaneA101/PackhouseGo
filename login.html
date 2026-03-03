@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f3d28">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <script src="/pwa-install.js" defer></script>
+  <title>PackhouseGo | Login</title>
+  <style>
+    :root { --bg:#f4f8f2; --panel:#ffffff; --text:#1e2a1e; --accent:#2f7d32; --muted:#6d7b6d; }
+    body { margin:0; font-family:Segoe UI,Arial,sans-serif; background:linear-gradient(135deg,#eef6e8,#f8fbf5); color:var(--text); }
+    .wrap { max-width:420px; margin:10vh auto; background:var(--panel); border-radius:14px; padding:28px; box-shadow:0 10px 28px rgba(0,0,0,.08); }
+    h1 { margin:0 0 6px; }
+    p { margin:0 0 18px; color:var(--muted); }
+    label { display:block; margin:12px 0 6px; font-weight:600; }
+    input { width:100%; padding:11px; border:1px solid #ccd6c7; border-radius:8px; box-sizing:border-box; }
+    button { width:100%; margin-top:16px; padding:12px; border:0; border-radius:8px; background:var(--accent); color:#fff; font-weight:700; cursor:pointer; }
+    .row { display:flex; justify-content:space-between; margin-top:14px; font-size:.95rem; }
+    a { color:#295f2d; text-decoration:none; }
+    #msg { margin-top:12px; color:#b00020; min-height:20px; }
+    @media (max-width:600px) {
+      .wrap { margin:3vh 10px; padding:18px; }
+      .row { flex-direction:column; gap:8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>PackhouseGo</h1>
+    <p>Login to manage citrus and stone fruit operations.</p>
+    <form id="loginForm">
+      <label for="email">Email</label>
+      <input id="email" type="email" required placeholder="you@farm.com">
+      <label for="password">Password</label>
+      <input id="password" type="password" required placeholder="••••••••">
+      <button type="submit">Login</button>
+      <div id="msg"></div>
+    </form>
+    <div class="row">
+      <span>Need account?</span>
+      <a href="register.html">Register farmer</a>
+    </div>
+  </div>
+  <script>
+    const sessionKey = "packhouse_session";
+
+    const existingSession = JSON.parse(localStorage.getItem(sessionKey) || "null");
+    if (existingSession) {
+      window.location.href = existingSession.role === "farmer" ? "farmerportal.html" : "index.html";
+    }
+
+    async function api(path, options = {}) {
+      const res = await fetch(path, {
+        headers: { "Content-Type": "application/json" },
+        ...options
+      });
+      let payload = {};
+      try { payload = await res.json(); } catch (_e) {}
+      if (!res.ok) throw new Error(payload.error || "Request failed");
+      return payload;
+    }
+
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("email").value.trim().toLowerCase();
+      const password = document.getElementById("password").value;
+      const msg = document.getElementById("msg");
+      msg.textContent = "";
+      try {
+        const data = await api("/api/login", {
+          method: "POST",
+          body: JSON.stringify({ email, password })
+        });
+        localStorage.setItem(sessionKey, JSON.stringify(data.user));
+        window.location.href = data.user.role === "farmer" ? "farmerportal.html" : "index.html";
+      } catch (err) {
+        msg.textContent = err.message || "Invalid email or password.";
+      }
+    });
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

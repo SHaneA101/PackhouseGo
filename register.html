@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f3d28">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <script src="/pwa-install.js" defer></script>
+  <title>PackhouseGo | Register Farmer</title>
+  <style>
+    :root { --bg:#f3f8ff; --panel:#fff; --text:#202837; --accent:#1f5ea8; --muted:#647089; }
+    body { margin:0; font-family:Segoe UI,Arial,sans-serif; background:linear-gradient(155deg,#e8f1ff,#f7fbff); color:var(--text); }
+    .wrap { max-width:680px; margin:6vh auto; background:var(--panel); border-radius:14px; padding:26px; box-shadow:0 10px 24px rgba(0,0,0,.08); }
+    h1 { margin:0 0 8px; }
+    p { margin:0 0 20px; color:var(--muted); }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .full { grid-column:1/-1; }
+    label { display:block; font-weight:600; margin-bottom:6px; }
+    input, select { width:100%; padding:10px; border:1px solid #c8d6ec; border-radius:8px; box-sizing:border-box; }
+    .checks { display:flex; gap:14px; padding:8px 0; }
+    button { margin-top:14px; background:var(--accent); color:#fff; border:0; border-radius:8px; padding:12px 16px; cursor:pointer; font-weight:700; }
+    a { margin-left:12px; color:#1f5ea8; text-decoration:none; }
+    #msg { margin-top:12px; min-height:20px; color:#126100; }
+    @media (max-width:700px) {
+      .wrap { margin:3vh 10px; padding:18px; }
+      .grid { grid-template-columns:1fr; gap:10px; }
+      .checks { flex-wrap:wrap; gap:10px 14px; }
+      a { margin-left:0; display:inline-block; margin-top:8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Register Farmer</h1>
+    <p>Create a farmer account to receive packhouse updates.</p>
+    <form id="regForm" class="grid">
+      <div>
+        <label for="name">Farmer Name</label>
+        <input id="name" required>
+      </div>
+      <div>
+        <label for="farm">Farm Name</label>
+        <input id="farm" required>
+      </div>
+      <div>
+        <label for="email">Email</label>
+        <input id="email" type="email" required>
+      </div>
+      <div>
+        <label for="password">Password</label>
+        <input id="password" type="password" required minlength="6">
+      </div>
+      <div class="full">
+        <label>Commodities</label>
+        <div class="checks">
+          <label><input type="checkbox" id="citrus" value="citrus"> Citrus</label>
+          <label><input type="checkbox" id="stone" value="stone"> Stone Fruit</label>
+        </div>
+      </div>
+      <div class="full">
+        <button type="submit">Create Account</button>
+        <a href="login.html">Back to login</a>
+      </div>
+      <div class="full" id="msg"></div>
+    </form>
+  </div>
+  <script>
+    async function api(path, options = {}) {
+      const res = await fetch(path, {
+        headers: { "Content-Type": "application/json" },
+        ...options
+      });
+      let payload = {};
+      try { payload = await res.json(); } catch (_e) {}
+      if (!res.ok) throw new Error(payload.error || "Request failed");
+      return payload;
+    }
+
+    document.getElementById("regForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("name").value.trim();
+      const farm = document.getElementById("farm").value.trim();
+      const email = document.getElementById("email").value.trim().toLowerCase();
+      const password = document.getElementById("password").value;
+      const commodities = [
+        document.getElementById("citrus").checked ? "citrus" : null,
+        document.getElementById("stone").checked ? "stone" : null
+      ].filter(Boolean);
+
+      if (!commodities.length) {
+        document.getElementById("msg").textContent = "Select at least one commodity.";
+        return;
+      }
+      try {
+        await api("/api/register", {
+          method: "POST",
+          body: JSON.stringify({ name, farm, email, password, commodities })
+        });
+        document.getElementById("msg").textContent = "Farmer registered. You can now login.";
+        e.target.reset();
+      } catch (err) {
+        document.getElementById("msg").textContent = err.message || "Could not register farmer.";
+      }
+    });
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

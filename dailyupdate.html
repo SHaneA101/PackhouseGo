@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f3d28">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <script src="/pwa-install.js" defer></script>
+  <title>PackhouseGo | Daily Farmer Updates</title>
+  <style>
+    body { margin:0; font-family:Segoe UI,Arial,sans-serif; background:#f7f6f2; color:#23201b; }
+    nav { background:#5b3b1d; color:#fff; padding:14px 20px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    nav a { color:#ffe7cc; text-decoration:none; margin-right:12px; white-space:nowrap; }
+    .nav-links { display:flex; flex-wrap:wrap; gap:8px 10px; }
+    .container { max-width:1050px; margin:18px auto; padding:0 14px; }
+    .panel { background:#fff; border-radius:12px; padding:16px; box-shadow:0 3px 12px rgba(0,0,0,.06); margin-bottom:16px; }
+    .flex { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    select, textarea, button { width:100%; padding:10px; border-radius:8px; border:1px solid #e2d7ca; box-sizing:border-box; }
+    textarea { min-height:140px; resize:vertical; }
+    button { background:#8a4e1e; color:#fff; border:0; font-weight:700; cursor:pointer; margin-top:10px; }
+    .tableWrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    table { width:100%; min-width:680px; border-collapse:collapse; }
+    th, td { border-bottom:1px solid #efe7dd; padding:8px; text-align:left; font-size:.94rem; }
+    @media (max-width:800px) { .flex { grid-template-columns:1fr; } }
+    @media (max-width:700px) {
+      .container { margin:12px auto; padding:0 10px; }
+      nav { padding:10px 12px; }
+      .panel { padding:12px; }
+      h2 { font-size:1.08rem; margin:0 0 10px; }
+      select, textarea, button { font-size:.92rem; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <strong>Daily Updates</strong>
+    <span class="nav-links">
+      <a href="index.html">Dashboard</a>
+      <a href="qc.html">QC</a>
+      <a href="forecast.html">Forecast</a>
+    </span>
+  </nav>
+  <div class="container">
+    <div class="panel flex">
+      <div>
+        <h2>Generate Farmer Message</h2>
+        <select id="farmerSelect"></select>
+        <textarea id="message"></textarea>
+        <button id="sendBtn">Send Update</button>
+      </div>
+      <div>
+        <h2>Message Preview Rules</h2>
+        <p>Summarizes citrus and stone fruit batches by status so farmers know progress from intake to dispatch.</p>
+        <p>Use this for SMS/email export from your operations team.</p>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Update Log</h2>
+      <div class="tableWrap">
+        <table>
+          <thead><tr><th>Time</th><th>Farmer</th><th>From</th><th>Type</th><th>Message</th></tr></thead>
+          <tbody id="logRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <script>
+    const session = JSON.parse(localStorage.getItem("packhouse_session") || "null");
+    if (!session) window.location.href = "login.html";
+
+    async function api(path, options = {}) {
+      const res = await fetch(path, {
+        headers: { "Content-Type": "application/json" },
+        ...options
+      });
+      let payload = {};
+      try { payload = await res.json(); } catch (_e) {}
+      if (!res.ok) throw new Error(payload.error || "Request failed");
+      return payload;
+    }
+
+    async function farmerNames() {
+      const batches = await api("/api/batches");
+      return [...new Set(batches.map((b) => b.farmer).filter(Boolean))];
+    }
+
+    async function autoMessage(farmer) {
+      const rows = (await api("/api/batches")).filter((b) => b.farmer === farmer);
+      const citrus = rows.filter((r) => r.fruitType === "citrus");
+      const stone = rows.filter((r) => r.fruitType === "stone");
+      const byStatus = (arr, s) => arr.filter((x) => x.status === s).length;
+      return [
+        `Hello ${farmer},`,
+        `Citrus: ${citrus.length} batch(es) total | Ready: ${byStatus(citrus, "ready_to_pack")} | Hold: ${byStatus(citrus, "qc_hold")} | Dispatched: ${byStatus(citrus, "dispatched")}.`,
+        `Stone fruit: ${stone.length} batch(es) total | Ready: ${byStatus(stone, "ready_to_pack")} | Hold: ${byStatus(stone, "qc_hold")} | Dispatched: ${byStatus(stone, "dispatched")}.`,
+        `PackhouseGo status updated ${new Date().toLocaleString()}.`
+      ].join("\n");
+    }
+
+    async function renderSelect() {
+      const farmers = await farmerNames();
+      const sel = document.getElementById("farmerSelect");
+      sel.innerHTML = farmers.length
+        ? farmers.map((f) => `<option value="${f}">${f}</option>`).join("")
+        : "<option value=''>No farmer batches yet</option>";
+      if (farmers.length) document.getElementById("message").value = await autoMessage(farmers[0]);
+    }
+
+    async function renderLogs() {
+      const logs = await api("/api/updates");
+      document.getElementById("logRows").innerHTML = logs.slice(0, 30).map((l) =>
+        `<tr><td>${new Date(l.timestamp).toLocaleString()}</td><td>${l.farmer}</td><td>${l.sentBy || "Unknown"}</td><td>${l.source || "admin_to_farmer"}</td><td>${l.message.replace(/\n/g,"<br>")}</td></tr>`
+      ).join("");
+    }
+
+    document.getElementById("farmerSelect").addEventListener("change", async (e) => {
+      if (e.target.value) document.getElementById("message").value = await autoMessage(e.target.value);
+    });
+
+    document.getElementById("sendBtn").addEventListener("click", async () => {
+      const farmer = document.getElementById("farmerSelect").value;
+      const message = document.getElementById("message").value.trim();
+      if (!farmer || !message) return;
+      await api("/api/updates", {
+        method: "POST",
+        body: JSON.stringify({ farmer, message, sentBy: session.name, source: "admin_to_farmer" })
+      });
+      await renderLogs();
+      alert("Update sent and logged.");
+    });
+
+    renderSelect();
+    renderLogs();
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

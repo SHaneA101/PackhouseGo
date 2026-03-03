@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f3d28">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <script src="/pwa-install.js" defer></script>
+  <title>PackhouseGo | Dashboard</title>
+  <style>
+    :root {
+      --bg1:#fff8ea;
+      --bg2:#f1f8ef;
+      --panel:#ffffff;
+      --text:#243121;
+      --muted:#60715f;
+      --line:#e7ecd9;
+      --accent:#2e6f40;
+      --accent-2:#f28d00;
+      --citrus:#f7a000;
+      --stone:#9f6a37;
+      --warn:#a06a00;
+      --hold:#9d1b1b;
+    }
+    * { box-sizing:border-box; }
+    body {
+      margin:0;
+      font-family:Segoe UI,Arial,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at 0% 0%, #fff4cd 0%, rgba(255,244,205,0) 38%),
+        radial-gradient(circle at 100% 0%, #dff1da 0%, rgba(223,241,218,0) 36%),
+        linear-gradient(140deg, var(--bg1), var(--bg2));
+    }
+    nav {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+      padding:14px 20px;
+      background:#1f3d28;
+      color:#fff;
+      border-bottom:1px solid rgba(255,255,255,.12);
+    }
+    nav a { color:#d6f1dd; margin-right:12px; text-decoration:none; white-space:nowrap; }
+    nav a:hover { color:#fff; }
+    .nav-links { display:flex; flex-wrap:wrap; gap:8px 10px; }
+    .container { max-width:1140px; margin:18px auto; padding:0 14px 24px; }
+    .hero {
+      background:linear-gradient(120deg, #ffe49a, #f5cc65 34%, #c8e8b7 100%);
+      border-radius:18px;
+      padding:18px;
+      box-shadow:0 10px 24px rgba(0,0,0,.08);
+      position:relative;
+      overflow:hidden;
+      margin-bottom:14px;
+    }
+    .hero::after {
+      content:"";
+      position:absolute;
+      width:230px;
+      height:230px;
+      right:-60px;
+      top:-90px;
+      border-radius:50%;
+      background:rgba(255,255,255,.25);
+    }
+    .hero h1 { margin:0; font-size:1.4rem; }
+    .hero p { margin:6px 0 0; color:#3d4a31; max-width:820px; }
+    .hero-meta {
+      margin-top:12px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      font-size:.92rem;
+      color:#344428;
+    }
+    .chip {
+      background:rgba(255,255,255,.62);
+      border:1px solid rgba(255,255,255,.72);
+      border-radius:999px;
+      padding:6px 10px;
+      font-weight:600;
+    }
+    .cards {
+      display:grid;
+      gap:12px;
+      grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+      margin-bottom:12px;
+    }
+    .card {
+      background:var(--panel);
+      padding:14px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      box-shadow:0 6px 14px rgba(0,0,0,.05);
+    }
+    .card small { color:var(--muted); display:block; margin-bottom:4px; }
+    .card .value { font-size:1.55rem; font-weight:800; letter-spacing:.3px; }
+    .panel {
+      background:var(--panel);
+      border-radius:14px;
+      border:1px solid var(--line);
+      padding:14px;
+      box-shadow:0 6px 14px rgba(0,0,0,.05);
+      margin-bottom:12px;
+    }
+    h2 { margin:18px 0 10px; font-size:1.1rem; }
+    .toolbar {
+      display:grid;
+      grid-template-columns:1fr 1fr auto;
+      gap:10px;
+      align-items:end;
+    }
+    .toolbar label { font-size:.85rem; color:var(--muted); display:block; margin-bottom:6px; }
+    .chartGrid {
+      margin-top:10px;
+      display:grid;
+      gap:12px;
+      grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    }
+    .chartCard {
+      background:#fcfef7;
+      border:1px solid #e8eed9;
+      border-radius:12px;
+      padding:12px;
+      min-height:220px;
+    }
+    .chartCard h3 { margin:0 0 8px; font-size:.95rem; color:#33422d; }
+    .chartCard canvas { width:100%; height:170px; display:block; }
+    .chartCard.wide { grid-column:1/-1; }
+    input, select, button {
+      width:100%;
+      padding:10px;
+      border-radius:8px;
+      border:1px solid var(--line);
+      font-size:.95rem;
+      background:#fff;
+      color:var(--text);
+    }
+    button {
+      width:auto;
+      background:linear-gradient(180deg, #3b824f, #2d6f40);
+      color:#fff;
+      border:0;
+      font-weight:700;
+      cursor:pointer;
+      padding:10px 14px;
+    }
+    button:hover { filter:brightness(1.04); }
+    .grid { display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); }
+    .tableWrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    table { width:100%; min-width:760px; border-collapse:collapse; margin-top:8px; font-size:.94rem; }
+    th, td { border-bottom:1px solid var(--line); padding:9px; text-align:left; }
+    th { color:#4a5a45; font-weight:700; }
+    .status { font-weight:700; text-transform:capitalize; }
+    .ok { color:#136f1e; }
+    .warn { color:var(--warn); }
+    .hold { color:var(--hold); }
+    #chartTip {
+      position:fixed;
+      pointer-events:none;
+      background:#1f3324;
+      color:#fff;
+      font-size:.82rem;
+      padding:6px 8px;
+      border-radius:7px;
+      opacity:0;
+      transform:translate(-50%, calc(-100% - 10px));
+      transition:opacity .12s;
+      z-index:10;
+      white-space:nowrap;
+    }
+    @media (max-width:760px) {
+      .container { margin:12px auto; padding:0 10px 20px; }
+      nav { padding:10px 12px; }
+      .hero { padding:14px; }
+      .hero h1 { font-size:1.2rem; }
+      .panel { padding:12px; }
+      .card { padding:12px; }
+      .toolbar { grid-template-columns:1fr; }
+      h2 { font-size:1.05rem; margin:14px 0 8px; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div><strong>PackhouseGo</strong> <span id="who"></span></div>
+    <div class="nav-links">
+      <a href="index.html">Dashboard</a>
+      <a href="qc.html">QC</a>
+      <a href="dailyupdate.html">Daily Updates</a>
+      <a href="forecast.html">Forecast</a>
+      <a href="#" id="logout">Logout</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="hero">
+      <h1>Citrus Operations Dashboard</h1>
+      <p>Live intake, QC, readiness, and dispatch visibility for citrus and stone fruit batches. Use filters to focus and track movement through each stage.</p>
+      <div class="hero-meta">
+        <span class="chip" id="todayLabel"></span>
+        <span class="chip" id="activeFilterLabel">View: All batches</span>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card"><small>Total batches</small><div id="kpiBatches" class="value">0</div></div>
+      <div class="card"><small>Citrus batches</small><div id="kpiCitrus" class="value">0</div></div>
+      <div class="card"><small>Stone fruit batches</small><div id="kpiStone" class="value">0</div></div>
+      <div class="card"><small>Ready to pack</small><div id="kpiReady" class="value">0</div></div>
+    </div>
+
+    <div class="panel">
+      <h2>Performance View</h2>
+      <div class="toolbar">
+        <div>
+          <label for="filterFruit">Fruit Type</label>
+          <select id="filterFruit">
+            <option value="all">All fruit types</option>
+            <option value="citrus">Citrus</option>
+            <option value="stone">Stone fruit</option>
+          </select>
+        </div>
+        <div>
+          <label for="filterStatus">Batch Status</label>
+          <select id="filterStatus">
+            <option value="all">All statuses</option>
+          </select>
+        </div>
+        <button id="refreshBtn" type="button">Refresh</button>
+      </div>
+
+      <div class="chartGrid">
+        <div class="chartCard">
+          <h3>Batch Status Distribution</h3>
+          <canvas id="statusChart" width="360" height="180"></canvas>
+        </div>
+        <div class="chartCard">
+          <h3>Fruit Mix</h3>
+          <canvas id="fruitChart" width="360" height="180"></canvas>
+        </div>
+        <div class="chartCard wide">
+          <h3>Recent Batch Bins Trend</h3>
+          <canvas id="binsTrendChart" width="720" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <h2>Receive New Batch</h2>
+    <div class="panel">
+      <form id="batchForm" class="grid">
+        <input id="farmer" placeholder="Farmer Name" required>
+        <select id="fruitType" required>
+          <option value="">Fruit Type</option>
+          <option value="citrus">Citrus</option>
+          <option value="stone">Stone Fruit</option>
+        </select>
+        <input id="variety" placeholder="Variety (e.g. Navel, Nectarine)" required>
+        <input id="bins" type="number" min="1" placeholder="Bins" required>
+        <select id="grade" required>
+          <option value="">Incoming Grade</option>
+          <option>OG</option><option>Juice</option><option>Other</option>
+        </select>
+        <button type="submit">Add Batch</button>
+      </form>
+    </div>
+
+    <h2>Batch Tracker</h2>
+    <div class="panel">
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Farmer</th><th>Fruit</th><th>Variety</th><th>Bins</th><th>Status</th><th>Set Status</th></tr>
+          </thead>
+          <tbody id="batchRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="chartTip"></div>
+
+  <script>
+    const session = JSON.parse(localStorage.getItem("packhouse_session") || "null");
+    if (!session) window.location.href = "login.html";
+    document.getElementById("who").textContent = " | " + session.name;
+
+    const statuses = ["received", "qc_pending", "qc_hold", "ready_to_pack", "packed", "dispatched"];
+    const statusLabels = {
+      received: "Received",
+      qc_pending: "QC Pending",
+      qc_hold: "QC Hold",
+      ready_to_pack: "Ready",
+      packed: "Packed",
+      dispatched: "Dispatched"
+    };
+    const state = { batches: [], filterFruit: "all", filterStatus: "all" };
+
+    async function api(path, options = {}) {
+      const res = await fetch(path, {
+        headers: { "Content-Type": "application/json" },
+        ...options
+      });
+      let payload = {};
+      try { payload = await res.json(); } catch (_e) {}
+      if (!res.ok) throw new Error(payload.error || "Request failed");
+      return payload;
+    }
+
+    function escapeHtml(text) {
+      return String(text || "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "\"":"&quot;", "'":"&#39;" }[c]));
+    }
+
+    function statusClass(s) {
+      if (s === "ready_to_pack" || s === "packed" || s === "dispatched") return "ok";
+      if (s === "qc_pending") return "warn";
+      if (s === "qc_hold") return "hold";
+      return "";
+    }
+
+    function statusDisplay(s) {
+      return statusLabels[s] || String(s || "").replaceAll("_", " ");
+    }
+
+    function filteredBatches() {
+      return state.batches.filter((b) => {
+        const fruitMatch = state.filterFruit === "all" || b.fruitType === state.filterFruit;
+        const statusMatch = state.filterStatus === "all" || b.status === state.filterStatus;
+        return fruitMatch && statusMatch;
+      });
+    }
+
+    function renderKpis() {
+      document.getElementById("kpiBatches").textContent = state.batches.length;
+      document.getElementById("kpiCitrus").textContent = state.batches.filter((b) => b.fruitType === "citrus").length;
+      document.getElementById("kpiStone").textContent = state.batches.filter((b) => b.fruitType === "stone").length;
+      document.getElementById("kpiReady").textContent = state.batches.filter((b) => b.status === "ready_to_pack").length;
+    }
+
+    function renderTable(rows) {
+      document.getElementById("batchRows").innerHTML = rows.map((b) => `
+        <tr>
+          <td>${escapeHtml(b.id)}</td>
+          <td>${escapeHtml(b.farmer)}</td>
+          <td>${escapeHtml(b.fruitType)}</td>
+          <td>${escapeHtml(b.variety)}</td>
+          <td>${Number(b.bins || 0)}</td>
+          <td class="status ${statusClass(b.status)}">${escapeHtml(statusDisplay(b.status))}</td>
+          <td>
+            <select data-id="${escapeHtml(b.id)}" class="statusPick">
+              ${statuses.map((s) => `<option value="${s}" ${s === b.status ? "selected" : ""}>${statusDisplay(s)}</option>`).join("")}
+            </select>
+          </td>
+        </tr>
+      `).join("");
+
+      document.querySelectorAll(".statusPick").forEach((el) => {
+        el.addEventListener("change", async () => {
+          await api(`/api/batches/${el.dataset.id}/status`, {
+            method: "PATCH",
+            body: JSON.stringify({ status: el.value })
+          });
+          await fetchAndRender();
+        });
+      });
+    }
+
+    function drawAxes(ctx, x, y, w, h) {
+      ctx.strokeStyle = "#cfd8c3";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x, y + h);
+      ctx.lineTo(x + w, y + h);
+      ctx.stroke();
+    }
+
+    function attachChartTooltip(canvas, hits, formatter) {
+      const tip = document.getElementById("chartTip");
+      canvas.onmousemove = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const hit = hits.find((h) => x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h);
+        if (!hit) {
+          tip.style.opacity = 0;
+          return;
+        }
+        tip.textContent = formatter(hit);
+        tip.style.left = e.clientX + "px";
+        tip.style.top = e.clientY + "px";
+        tip.style.opacity = 1;
+      };
+      canvas.onmouseleave = () => { tip.style.opacity = 0; };
+    }
+
+    function drawStatusChart(rows) {
+      const canvas = document.getElementById("statusChart");
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const counts = statuses.map((s) => rows.filter((b) => b.status === s).length);
+      const max = Math.max(1, ...counts);
+      const x = 30, y = 14, w = canvas.width - 44, h = canvas.height - 40;
+      drawAxes(ctx, x, y, w, h);
+
+      const barW = Math.max(16, Math.floor((w - 12) / statuses.length) - 8);
+      const gap = (w - barW * statuses.length) / (statuses.length + 1);
+      const hits = [];
+      const colors = ["#8abf7f", "#e3b44b", "#d97a7a", "#58a769", "#4d8dcb", "#376e53"];
+
+      counts.forEach((value, i) => {
+        const bh = (value / max) * (h - 14);
+        const bx = x + gap + i * (barW + gap);
+        const by = y + h - bh;
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.fillRect(bx, by, barW, bh);
+        ctx.fillStyle = "#4b5a45";
+        ctx.font = "10px Segoe UI";
+        ctx.fillText(String(value), bx + (barW / 2) - 3, by - 4);
+        ctx.save();
+        ctx.translate(bx + (barW / 2), y + h + 11);
+        ctx.rotate(-0.36);
+        ctx.fillStyle = "#51624b";
+        ctx.fillText(statusDisplay(statuses[i]), -20, 0);
+        ctx.restore();
+        hits.push({ x: bx, y: by, w: barW, h: bh || 2, label: statuses[i], value });
+      });
+
+      attachChartTooltip(canvas, hits, (hit) => `${statusDisplay(hit.label)}: ${hit.value}`);
+    }
+
+    function drawFruitChart(rows) {
+      const canvas = document.getElementById("fruitChart");
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const citrus = rows.filter((b) => b.fruitType === "citrus").length;
+      const stone = rows.filter((b) => b.fruitType === "stone").length;
+      const total = Math.max(1, citrus + stone);
+      const cx = 110, cy = 88, r = 60;
+      const citrusAngle = (Math.PI * 2 * citrus) / total;
+
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.fillStyle = "#f7a000";
+      ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + citrusAngle);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.fillStyle = "#9f6a37";
+      ctx.arc(cx, cy, r, -Math.PI / 2 + citrusAngle, -Math.PI / 2 + Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.fillStyle = "#fcfef7";
+      ctx.arc(cx, cy, 30, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#3f4f3a";
+      ctx.font = "bold 12px Segoe UI";
+      ctx.fillText(String(citrus + stone), cx - 8, cy + 4);
+
+      ctx.fillStyle = "#f7a000";
+      ctx.font = "12px Segoe UI";
+      ctx.fillRect(205, 52, 10, 10);
+      ctx.fillStyle = "#2f3a2d";
+      ctx.fillText("Citrus: " + citrus, 222, 61);
+      ctx.fillStyle = "#9f6a37";
+      ctx.fillRect(205, 80, 10, 10);
+      ctx.fillStyle = "#2f3a2d";
+      ctx.fillText("Stone: " + stone, 222, 89);
+
+      const hits = [
+        { x: 205, y: 47, w: 130, h: 18, label: "Citrus", value: citrus },
+        { x: 205, y: 75, w: 130, h: 18, label: "Stone fruit", value: stone }
+      ];
+      attachChartTooltip(canvas, hits, (hit) => `${hit.label}: ${hit.value}`);
+    }
+
+    function drawBinsTrend(rows) {
+      const canvas = document.getElementById("binsTrendChart");
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const points = rows.slice(-12).map((b, i) => ({ label: String(b.id || i + 1), bins: Number(b.bins || 0) }));
+      if (!points.length) return;
+      const max = Math.max(1, ...points.map((p) => p.bins));
+      const x = 36, y = 12, w = canvas.width - 52, h = canvas.height - 34;
+      drawAxes(ctx, x, y, w, h);
+
+      ctx.strokeStyle = "#2e6f40";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const hits = [];
+      points.forEach((p, i) => {
+        const px = x + (i * w) / Math.max(1, points.length - 1);
+        const py = y + h - (p.bins / max) * (h - 16);
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        hits.push({ x: px - 8, y: py - 8, w: 16, h: 16, label: p.label, value: p.bins });
+      });
+      ctx.stroke();
+
+      points.forEach((p, i) => {
+        const px = x + (i * w) / Math.max(1, points.length - 1);
+        const py = y + h - (p.bins / max) * (h - 16);
+        ctx.fillStyle = "#f28d00";
+        ctx.beginPath();
+        ctx.arc(px, py, 4, 0, Math.PI * 2);
+        ctx.fill();
+        if (i % 2 === 0) {
+          ctx.fillStyle = "#576a52";
+          ctx.font = "10px Segoe UI";
+          ctx.fillText(p.label, px - 8, y + h + 12);
+        }
+      });
+
+      attachChartTooltip(canvas, hits, (hit) => `Batch ${hit.label}: ${hit.value} bins`);
+    }
+
+    function renderDashboard() {
+      const rows = filteredBatches();
+      const fruitText = state.filterFruit === "all" ? "All fruit" : state.filterFruit === "citrus" ? "Citrus" : "Stone fruit";
+      const statusText = state.filterStatus === "all" ? "All statuses" : statusDisplay(state.filterStatus);
+      document.getElementById("activeFilterLabel").textContent = `View: ${fruitText} | ${statusText} | ${rows.length} batch(es)`;
+
+      renderTable(rows);
+      drawStatusChart(rows);
+      drawFruitChart(rows);
+      drawBinsTrend(rows);
+    }
+
+    async function fetchAndRender() {
+      state.batches = await api("/api/batches");
+      renderKpis();
+      renderDashboard();
+    }
+
+    document.getElementById("batchForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await api("/api/batches", {
+        method: "POST",
+        body: JSON.stringify({
+          farmer: document.getElementById("farmer").value.trim(),
+          fruitType: document.getElementById("fruitType").value,
+          variety: document.getElementById("variety").value.trim(),
+          bins: Number(document.getElementById("bins").value),
+          grade: document.getElementById("grade").value
+        })
+      });
+      e.target.reset();
+      await fetchAndRender();
+    });
+
+    document.getElementById("filterFruit").addEventListener("change", (e) => {
+      state.filterFruit = e.target.value;
+      renderDashboard();
+    });
+
+    document.getElementById("filterStatus").addEventListener("change", (e) => {
+      state.filterStatus = e.target.value;
+      renderDashboard();
+    });
+
+    document.getElementById("refreshBtn").addEventListener("click", fetchAndRender);
+
+    document.getElementById("logout").addEventListener("click", (e) => {
+      e.preventDefault();
+      localStorage.removeItem("packhouse_session");
+      window.location.href = "login.html";
+    });
+
+    document.getElementById("todayLabel").textContent = "Updated: " + new Date().toLocaleString();
+    document.getElementById("filterStatus").innerHTML = "<option value='all'>All statuses</option>" +
+      statuses.map((s) => `<option value="${s}">${statusDisplay(s)}</option>`).join("");
+
+    fetchAndRender();
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
