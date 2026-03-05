@@ -35,6 +35,18 @@
         "citrus",
         "stone"
       ]
+    },
+    {
+      "id": "u-1772547427959",
+      "name": "Someone",
+      "farm": "SA",
+      "email": "admin@local.farm",
+      "password": "password",
+      "role": "farmer",
+      "commodities": [
+        "citrus",
+        "stone"
+      ]
     }
   ],
   "batches": [
@@ -99,6 +111,13 @@
     }
   ],
   "updates": [
+    {
+      "farmer": "Someone",
+      "message": "Hi Ek stuur vandag 500 bins",
+      "sentBy": "Someone",
+      "source": "farmer_to_admin",
+      "timestamp": "2026-03-03T14:18:22.349Z"
+    },
     {
       "farmer": "John",
       "message": "ek stuur vandag 300 bins ang",
